@@ -1,10 +1,10 @@
 pure_pursuit:
   ros__parameters:
-    waypoints_path: "/sim_ws/src/pure_pursuit/racelines/e7_floor5_square.csv"
-    odom_topic: "/ego_racecar/odom"
-    car_refFrame: "ego_racecar/base_link"
+    waypoints_path: "/home/user/f1tenth_ws/src/CL2-UWaterloo/pure_pursuit/racelines/track.csv"
+    odom_topic: "/pf/pose/odom"
+    car_refFrame: "laser"
     global_refFrame: "map"
-    drive_topic: "/drive"
+    drive_topic: "/sim/drive"
     rviz_current_waypoint_topic: "/current_waypoint"
     rviz_lookahead_waypoint_topic: "/lookahead_waypoint"
 
@@ -19,4 +19,4 @@ pure_pursuit:
 
 waypoint_visualizer_node:
   ros__parameters:
-    waypoints_path: "/sim_ws/src/pure_pursuit/racelines/e7_floor5_square.csv"
+    waypoints_path: "/home/user/f1tenth_ws/src/CL2-UWaterloo/pure_pursuit/racelines/track.csv"
