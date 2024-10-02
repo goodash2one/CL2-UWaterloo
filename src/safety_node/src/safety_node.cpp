@@ -30,38 +30,59 @@ class Safety : public rclcpp::Node {
     }
 
     void scan_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg) {
+        double r;
+        std::size_t i;
+        double min_r = 0.18; // scan_msg->range_min; // To be tuned in real vehicle
         double forward_r = scan_msg->ranges[scan_msg->ranges.size()/2];
-	if (this->is_breaking) {
-	    // AEB escape conditions: enough space to move forward
-	    double escape_r = 1.5;  // To be tuned in real vehicle
-	    if (!std::isnan(forward_r) && escape_r < forward_r)
-	        this->is_breaking = false;
-	} else {
-	    int i = 1, j = 1;
-	    while (std::isnan(forward_r)) {
-		RCLCPP_INFO(this->get_logger(), "cannot find forward space: searching...");  // Output to log;
-		if (i > 10)
-		    return;
-	        forward_r = scan_msg->ranges[scan_msg->ranges.size()/2 + i*j];
-		if (j < 0)
-		    i++;
-		j *= -1;
-	    }
-	    /// calculate TTC
+
+	// AEB escape conditions: enough space to move forward
+        if (this->is_breaking) {
+            double escape_r = 1.5;  // To be tuned in real vehicle
+            if (!std::isnan(forward_r) && escape_r < forward_r) {
+                for (i = 0; i < scan_msg->ranges.size(); i++) {
+                    r = scan_msg->ranges[i];
+                    if (std::isnan(r))
+                        continue;
+                    if (r < min_r)
+                        break;
+                }
+                if (i == scan_msg->ranges.size()) {
+                    RCLCPP_INFO(this->get_logger(), "release AEB");
+                    this->is_breaking = false;
+                }
+            }
+        } else {
+            int k = 1, l = 1;
+            while (std::isnan(forward_r)) {
+                RCLCPP_INFO(this->get_logger(), "cannot find forward space: searching...");  // Output to log;
+                if (k > 10)
+                    return;
+                forward_r = scan_msg->ranges[scan_msg->ranges.size()/2 + k*l];
+                if (l < 0)
+                    k++;
+                l *= -1;
+            }
+            /// calculate TTC
             /// bool emergency_breaking = false;
-            for (std::size_t i = 0; i < scan_msg->ranges.size(); i++) {
-                double r = scan_msg->ranges[i];
-                if (std::isnan(r) || r > scan_msg->range_max || r < scan_msg->range_min) {
+            for (i = 0; i < scan_msg->ranges.size(); i++) {
+                r = scan_msg->ranges[i];
+                if (r < min_r) {
+                    RCLCPP_INFO(this->get_logger(), "under the safety margin");
+                    is_breaking = true;
+                    break;
+                } else if (std::isnan(r) || r > scan_msg->range_max) {
                     continue;
                 }
                 double threshold = 0.32;  // To be tuned in real vehicle
-		double cos_val = std::cos(scan_msg->angle_min + (double)i * scan_msg->angle_increment);
+                double cos_val = std::cos(scan_msg->angle_min + (double)i * scan_msg->angle_increment);
                 if (forward_r < r / std::max(cos_val, 0.0001) && r / std::max(this->speed * cos_val, 0.001) < threshold) {
+                    RCLCPP_INFO(this->get_logger(), "AEB triggered");
                     is_breaking = true;
                     break;
                 }
             }
-	}
+        }
+	
         // Publish command to brake
         if (is_breaking) {
             auto drive_msg = ackermann_msgs::msg::AckermannDriveStamped();
