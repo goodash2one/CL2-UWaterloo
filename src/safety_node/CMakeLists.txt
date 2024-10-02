@@ -30,13 +30,23 @@ include_directories(include)
 
 # Create Cpp executable
 add_executable(safety_node src/safety_node.cpp)
-ament_target_dependencies(safety_node 
+ament_target_dependencies(safety_node
+  rclcpp geometry_msgs ackermann_msgs nav_msgs sensor_msgs std_msgs
+)
+add_executable(safety_node_legacy_revised src/safety_node_legacy_revised.cpp)
+ament_target_dependencies(safety_node_legacy_revised
+  rclcpp geometry_msgs ackermann_msgs nav_msgs sensor_msgs std_msgs
+)
+add_executable(safety_node_legacy src/safety_node_legacy.cpp)
+ament_target_dependencies(safety_node_legacy
   rclcpp geometry_msgs ackermann_msgs nav_msgs sensor_msgs std_msgs
 )
 
 # Install Cpp executables
 install(TARGETS
   safety_node
+  safety_node_legacy_revised
+  safety_node_legacy
   DESTINATION lib/${PROJECT_NAME})
 
 # Install Python modules
