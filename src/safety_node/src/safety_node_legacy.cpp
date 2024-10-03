@@ -36,7 +36,7 @@ class Safety : public rclcpp::Node {
             if (std::isnan(r) || r > scan_msg->range_max || r < scan_msg->range_min) {
                 continue;
             }
-            double threshold = 1;  // To be tuned in real vehicle
+            double threshold = 0.32;  // To be tuned in real vehicle
             if (r / std::max(this->speed * std::cos(scan_msg->angle_min + (double)i * scan_msg->angle_increment), 0.001) < threshold) {
                 emergency_breaking = true;
                 break;
