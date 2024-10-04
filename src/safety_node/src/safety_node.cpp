@@ -32,10 +32,10 @@ class Safety : public rclcpp::Node {
     void scan_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg) {
         double r;
         std::size_t i;
-        double min_r = 0.18; // scan_msg->range_min; // To be tuned in real vehicle
+        double min_r;
         double forward_r = scan_msg->ranges[scan_msg->ranges.size()/2];
 
-	// AEB escape conditions: enough space to move forward
+		// AEB escape conditions: enough space to move forward
         if (this->is_breaking) {
             double escape_r = 1.5;  // To be tuned in real vehicle
             if (!std::isnan(forward_r) && escape_r < forward_r) {
@@ -43,6 +43,10 @@ class Safety : public rclcpp::Node {
                     r = scan_msg->ranges[i];
                     if (std::isnan(r))
                         continue;
+					if (i > 400 && i < scan_msg->ranges.size()-400)
+						min_r = 0.22;
+					else
+						min_r = 0.15;
                     if (r < min_r)
                         break;
                 }
@@ -66,17 +70,21 @@ class Safety : public rclcpp::Node {
             /// bool emergency_breaking = false;
             for (i = 0; i < scan_msg->ranges.size(); i++) {
                 r = scan_msg->ranges[i];
+				if (std::isnan(r) || r > scan_msg->range_max)
+					continue;
+				if (i > 400 && i < scan_msg->ranges.size()-400)
+					min_r = 0.22;
+				else
+					min_r = 0.15;
                 if (r < min_r) {
-                    RCLCPP_INFO(this->get_logger(), "under the safety margin");
+                    RCLCPP_INFO(this->get_logger(), "emergency brake engaged: under the safety margin");
                     is_breaking = true;
                     break;
-                } else if (std::isnan(r) || r > scan_msg->range_max) {
-                    continue;
                 }
                 double threshold = 0.32;  // To be tuned in real vehicle
                 double cos_val = std::cos(scan_msg->angle_min + (double)i * scan_msg->angle_increment);
                 if (forward_r < r / std::max(cos_val, 0.0001) && r / std::max(this->speed * cos_val, 0.001) < threshold) {
-                    RCLCPP_INFO(this->get_logger(), "AEB triggered");
+                    RCLCPP_INFO(this->get_logger(), "emergency brake engaged: AEB triggered");
                     is_breaking = true;
                     break;
                 }
@@ -87,7 +95,7 @@ class Safety : public rclcpp::Node {
         if (is_breaking) {
             auto drive_msg = ackermann_msgs::msg::AckermannDriveStamped();
             drive_msg.drive.speed = 0.0;
-            RCLCPP_INFO(this->get_logger(), "emergency brake engaged at speed '%f'", this->speed);  // Output to log;
+            // RCLCPP_INFO(this->get_logger(), "emergency brake engaged at speed '%f'", this->speed);  // Output to log;
             this->publisher_->publish(drive_msg);
         }
     }
