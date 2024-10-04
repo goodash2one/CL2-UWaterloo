@@ -35,18 +35,18 @@ class Safety : public rclcpp::Node {
         double min_r;
         double forward_r = scan_msg->ranges[scan_msg->ranges.size()/2];
 
-		// AEB escape conditions: enough space to move forward
         if (this->is_breaking) {
-            double escape_r = 1.5;  // To be tuned in real vehicle
-            if (!std::isnan(forward_r) && escape_r < forward_r) {
+	    // AEB release conditions
+            double release_r = 1.5;  // To be tuned in real vehicle
+            if (!std::isnan(forward_r) && release_r < forward_r) {
                 for (i = 0; i < scan_msg->ranges.size(); i++) {
                     r = scan_msg->ranges[i];
                     if (std::isnan(r))
                         continue;
-					if (i > 400 && i < scan_msg->ranges.size()-400)
-						min_r = 0.22;
-					else
-						min_r = 0.15;
+		    if (i > 400 && i < scan_msg->ranges.size()-400)
+			min_r = 0.22;
+		    else
+			min_r = 0.15;
                     if (r < min_r)
                         break;
                 }
@@ -56,6 +56,7 @@ class Safety : public rclcpp::Node {
                 }
             }
         } else {
+	    // AEB engage conditions
             int k = 1, l = 1;
             while (std::isnan(forward_r)) {
                 RCLCPP_INFO(this->get_logger(), "cannot find forward space: searching...");  // Output to log;
@@ -70,12 +71,12 @@ class Safety : public rclcpp::Node {
             /// bool emergency_breaking = false;
             for (i = 0; i < scan_msg->ranges.size(); i++) {
                 r = scan_msg->ranges[i];
-				if (std::isnan(r) || r > scan_msg->range_max)
-					continue;
-				if (i > 400 && i < scan_msg->ranges.size()-400)
-					min_r = 0.22;
-				else
-					min_r = 0.15;
+		if (std::isnan(r) || r > scan_msg->range_max)
+		    continue;
+		if (i > 400 && i < scan_msg->ranges.size()-400)
+		    min_r = 0.22;
+		else
+		    min_r = 0.15;
                 if (r < min_r) {
                     RCLCPP_INFO(this->get_logger(), "emergency brake engaged: under the safety margin");
                     is_breaking = true;
