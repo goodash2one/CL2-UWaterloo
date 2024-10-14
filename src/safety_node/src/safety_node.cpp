@@ -15,15 +15,22 @@ class Safety : public rclcpp::Node {
         publisher_ = this->create_publisher<ackermann_msgs::msg::AckermannDriveStamped>("safety", 10);
         scan_subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>("scan", 10, std::bind(&Safety::scan_callback, this, _1));
         odom_subscription_ = this->create_subscription<nav_msgs::msg::Odometry>("ego_racecar/odom", 10, std::bind(&Safety::odom_callback, this, _1));
+	drive_subscription_ = this->create_subscription<ackermann_msgs::msg::AckermannDriveStamped>("drive", 10, std::bind(&Safety::drive_callback, this, _1));
     }
 
    private:
     double speed = 0.0;
+    double steering = 0.0;
     bool is_breaking = false;
 
     rclcpp::Publisher<ackermann_msgs::msg::AckermannDriveStamped>::SharedPtr publisher_;
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_subscription_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
+    rclcpp::Subscription<ackermann_msgs::msg::AckermannDriveStamped>::SharedPtr drive_subscription_;
+
+    void drive_callback(const ackermann_msgs::msg::AckermannDriveStamped::ConstSharedPtr cmd) {
+        this->steering = cmd->drive.steering_angle;
+    }
 
     void odom_callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg) {
         this->speed = msg->twist.twist.linear.x;
@@ -96,6 +103,7 @@ class Safety : public rclcpp::Node {
         if (is_breaking) {
             auto drive_msg = ackermann_msgs::msg::AckermannDriveStamped();
             drive_msg.drive.speed = 0.0;
+	    drive_msg.drive.steering_angle = this->steering;
             // RCLCPP_INFO(this->get_logger(), "emergency brake engaged at speed '%f'", this->speed);  // Output to log;
             this->publisher_->publish(drive_msg);
         }
