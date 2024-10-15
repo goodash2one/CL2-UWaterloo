@@ -12,7 +12,9 @@ class Safety : public rclcpp::Node {
 
    public:
     Safety() : Node("safety_node") {
-        publisher_ = this->create_publisher<ackermann_msgs::msg::AckermannDriveStamped>("safety", 10);
+	rclcpp::QoS qos_profile(10);
+	qos_profile.best_effort();
+        publisher_ = this->create_publisher<ackermann_msgs::msg::AckermannDriveStamped>("safety", qos_profile);
         scan_subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>("scan", 10, std::bind(&Safety::scan_callback, this, _1));
         odom_subscription_ = this->create_subscription<nav_msgs::msg::Odometry>("ego_racecar/odom", 10, std::bind(&Safety::odom_callback, this, _1));
 	drive_subscription_ = this->create_subscription<ackermann_msgs::msg::AckermannDriveStamped>("drive", 10, std::bind(&Safety::drive_callback, this, _1));
