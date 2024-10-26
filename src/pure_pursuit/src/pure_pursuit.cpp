@@ -164,6 +164,7 @@ void PurePursuit::visualize_current_point(Eigen::Vector3d &point) {
     vis_current_point_pub->publish(marker);
 }
 
+/*
 void PurePursuit::get_waypoint() {
     // Main logic: Search within the next 500 points
     double longest_distance = 0;
@@ -219,6 +220,60 @@ void PurePursuit::get_waypoint() {
     // If a waypoint is not found within our radius, then waypoints.index = 0
     waypoints.index = final_i;
     waypoints.velocity_index = velocity_i;
+}
+*/
+
+void PurePursuit::get_waypoint() {
+    // Lookahead needs to be between the min_lookhead and the max_lookahead
+    double lookahead = std::min(std::max(min_lookahead, max_lookahead * curr_velocity / lookahead_ratio), max_lookahead);
+
+    // Find the closest point to the car, and use the velocity index(current point) for that
+    double shortest_distance = p2pdist(waypoints.X[0], x_car_world, waypoints.Y[0], y_car_world);
+    int curr_idx = 0;
+    for (int i = 0; i < num_waypoints; i++) {
+        if (p2pdist(waypoints.X[i], x_car_world, waypoints.Y[i], y_car_world) <= shortest_distance) {
+            shortest_distance = p2pdist(waypoints.X[i], x_car_world, waypoints.Y[i], y_car_world);
+            curr_idx = i;
+        }
+    }
+
+    int min = 1;
+    while (p2pdist(waypoints.X[curr_idx], waypoints.X[(curr_idx+min)%num_waypoints], waypoints.Y[curr_idx], waypoints.Y[(curr_idx+min)%num_waypoints]) <= min_lookahead)
+        min++;
+    int start = (curr_idx + min) % num_waypoints;
+    int end = (start + 1) % num_waypoints;
+    while (p2pdist(waypoints.X[curr_idx], waypoints.X[end], waypoints.Y[curr_idx], waypoints.Y[end]) <= lookahead)
+        end = (end + 1) % num_waypoints;
+
+    double longest_distance = 0;
+    int look_idx = start;
+    if (end < start) {  // If we need to loop around
+        for (int i = start; i < num_waypoints; i++) {
+            if (p2pdist(waypoints.X[i], x_car_world, waypoints.Y[i], y_car_world) <= lookahead && p2pdist(waypoints.X[i], x_car_world, waypoints.Y[i], y_car_world) >= longest_distance) {
+                longest_distance = p2pdist(waypoints.X[i], x_car_world, waypoints.Y[i], y_car_world);
+                look_idx = i;
+            }
+        }
+        for (int i = 0; i < end; i++) {
+            if (p2pdist(waypoints.X[i], x_car_world, waypoints.Y[i], y_car_world) <= lookahead && p2pdist(waypoints.X[i], x_car_world, waypoints.Y[i], y_car_world) >= longest_distance) {
+                longest_distance = p2pdist(waypoints.X[i], x_car_world, waypoints.Y[i], y_car_world);
+                look_idx = i;
+            }
+        }
+    } else {
+        for (int i = start; i < end; i++) {
+            if (p2pdist(waypoints.X[i], x_car_world, waypoints.Y[i], y_car_world) <= lookahead && p2pdist(waypoints.X[i], x_car_world, waypoints.Y[i], y_car_world) >= longest_distance) {
+                longest_distance = p2pdist(waypoints.X[i], x_car_world, waypoints.Y[i], y_car_world);
+                look_idx = i;
+            }
+        }
+    }
+
+    // current point
+    waypoints.velocity_index = curr_idx;
+
+    // lookahead point
+    waypoints.index = look_idx;
 }
 
 void PurePursuit::quat_to_rot(double q0, double q1, double q2, double q3) {
