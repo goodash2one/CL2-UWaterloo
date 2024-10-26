@@ -46,7 +46,7 @@ class Safety : public rclcpp::Node {
 
         if (this->is_breaking) {
 	    // AEB release conditions
-            double release_r = 1.5;  // To be tuned in real vehicle
+            double release_r = 1.0;  // To be tuned in real vehicle
             if (!std::isnan(forward_r) && release_r < forward_r) {
                 for (i = 0; i < scan_msg->ranges.size(); i++) {
                     r = scan_msg->ranges[i];
