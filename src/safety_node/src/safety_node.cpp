@@ -82,7 +82,9 @@ class Safety : public rclcpp::Node {
                 r = scan_msg->ranges[i];
 		if (std::isnan(r) || r > scan_msg->range_max)
 		    continue;
-		if (i > 400 && i < scan_msg->ranges.size()-400)
+		if (i < 180 || i > scan_msg->ranges.size()-180)
+		    continue;
+		else if (i > 400 && i < scan_msg->ranges.size()-400)
 		    min_r = 0.22;
 		else
 		    min_r = 0.15;
@@ -91,7 +93,9 @@ class Safety : public rclcpp::Node {
                     is_breaking = true;
                     break;
                 }
-                double threshold = 0.32;  // To be tuned in real vehicle
+		if (i < 400 || i > scan_msg->ranges.size()-400)
+		    continue;
+                double threshold = 0.38;  // To be tuned in real vehicle
                 double cos_val = std::cos(scan_msg->angle_min + (double)i * scan_msg->angle_increment);
                 if (forward_r < r / std::max(cos_val, 0.0001) && r / std::max(this->speed * cos_val, 0.001) < threshold) {
                     RCLCPP_INFO(this->get_logger(), "emergency brake engaged: AEB triggered");
