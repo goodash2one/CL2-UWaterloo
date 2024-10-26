@@ -35,7 +35,7 @@ def generate_launch_description():
     )
 
     # finalize
-    ld.add_action(rviz_node)
+    # ld.add_action(rviz_node)
     ld.add_action(pure_pursuit)
     ld.add_action(waypoint_visualizer_node)
 
